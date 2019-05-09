@@ -48,7 +48,6 @@ public class MqttChannelHandler extends SimpleChannelInboundHandler<MqttMessage>
 
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
-        System.out.println("channelActive");
         super.channelActive(ctx);
         if (client != null) {
             client.sendConnectMsg();
@@ -57,7 +56,6 @@ public class MqttChannelHandler extends SimpleChannelInboundHandler<MqttMessage>
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-        System.out.println("channelInactive : ");
         super.channelInactive(ctx);
         if(client!=null){
             client.close();
@@ -70,18 +68,17 @@ public class MqttChannelHandler extends SimpleChannelInboundHandler<MqttMessage>
 
     @Override
     public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
-        System.out.println("channelRegistered");
         super.channelRegistered(ctx);
     }
 
     @Override
     public void channelUnregistered(ChannelHandlerContext ctx) throws Exception {
-        System.out.println("channelUnregistered");
         super.channelUnregistered(ctx);
     }
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+        cause.printStackTrace();
         try {
             if (client != null) {
                 client.setException(cause);

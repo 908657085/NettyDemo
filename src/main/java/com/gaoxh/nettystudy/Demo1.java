@@ -13,18 +13,18 @@ import java.util.Set;
 /**
  * echo demo
  */
-public class demo1 {
+public class Demo1 {
 
 
     public static void main(String args[]){
         try {
-            startServer(8080);
+            startNioServer(8080);
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
-    public static void startServer(int port) throws IOException {
+    public static void startNioServer(int port) throws IOException {
         // 打开服务端ServerSocketChannel
         ServerSocketChannel serverChannel = ServerSocketChannel.open();
         // 设置为非阻塞模式
