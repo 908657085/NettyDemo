@@ -10,6 +10,7 @@ sourceCompatibility = 1.8
 
 repositories {
     mavenCentral()
+    maven{url 'http://maven.aliyun.com/nexus/content/groups/public/'}
 }
 
 sourceSets {
@@ -22,7 +23,9 @@ sourceSets {
 
 dependencies {
     implementation 'io.netty:netty-all:4.1.35.Final'
+    implementation 'com.alibaba:fastjson:1.1.71.android'
+    implementation files('libs/bcprov-jdk15on-1.64.jar')
 }
 
 
-mainClassName = 'com.gaoxh.nettystudy.mqtt.MqttTestCase1'
+mainClassName = 'com.gaoxh.nettystudy.mqtt.MqttTestCase'

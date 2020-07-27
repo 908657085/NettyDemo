@@ -78,7 +78,7 @@ public class MqttChannelHandler extends SimpleChannelInboundHandler<MqttMessage>
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-        cause.printStackTrace();
+        System.out.println("连接异常:"+cause.getMessage());
         try {
             if (client != null) {
                 client.setException(cause);
@@ -94,7 +94,6 @@ public class MqttChannelHandler extends SimpleChannelInboundHandler<MqttMessage>
                 try {
                     if (client != null) {
                         client.changeState(MqttClient.ClientState.MQTT_CONNECTED);
-                        client.subTopics();
                     }
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -124,16 +123,14 @@ public class MqttChannelHandler extends SimpleChannelInboundHandler<MqttMessage>
     private void handlePublish(Channel channel, MqttPublishMessage message) {
         switch (message.fixedHeader().qosLevel()) {
             case AT_MOST_ONCE:
-                break;
-
             case AT_LEAST_ONCE:
                 if (message.variableHeader().packetId() != -1) {
-                    MqttFixedHeader fixedHeader = new MqttFixedHeader(MqttMessageType.PUBACK, false, MqttQoS.AT_MOST_ONCE, false, 0);
+                    MqttFixedHeader fixedHeader = new MqttFixedHeader(MqttMessageType.PUBACK, false, message.fixedHeader().qosLevel(), false, 0);
                     MqttMessageIdVariableHeader variableHeader = MqttMessageIdVariableHeader.from(message.variableHeader().packetId());
                     channel.writeAndFlush(new MqttPubAckMessage(fixedHeader, variableHeader));
                 }
+                System.out.println();
                 break;
-
             case EXACTLY_ONCE:
                 if (message.variableHeader().packetId() != -1) {
                     MqttFixedHeader fixedHeader = new MqttFixedHeader(MqttMessageType.PUBREC, false, MqttQoS.AT_MOST_ONCE, false, 0);

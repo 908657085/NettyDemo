@@ -3,6 +3,7 @@ package com.gaoxh.nettystudy.mqtt;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
@@ -19,6 +20,7 @@ public class MqttClientManager {
 
     private static final int MIN_MSG_ID = 1;        // Lowest possible MQTT message ID to use
     private static final int MAX_MSG_ID = 65535;    // Highest possible MQTT message ID to use
+    EventLoopGroup eventExecutors = new NioEventLoopGroup();
     Bootstrap bootstrap;
     List<MqttClient> mqttClientList = new CopyOnWriteArrayList<>();
     Random random = new Random();
@@ -29,10 +31,10 @@ public class MqttClientManager {
     public MqttClientManager(String remoteHost, int remoteTcpPort, int keepAliveSeconds) {
         this.keepAliveSeconds = keepAliveSeconds;
         bootstrap = new Bootstrap()
-                .group(new NioEventLoopGroup())
+                .group(eventExecutors)
                 //禁用nagle算法 Nagle算法就是为了尽可能发送大块数据，避免网络中充斥着许多小数据块。
                 .option(ChannelOption.TCP_NODELAY, true)//屏蔽Nagle算法试图
-                .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 5000)
+                .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 1000)
                 //指定NIO方式   //指定是NioSocketChannel, 用NioSctpChannel会抛异常
                 .channel(NioSocketChannel.class)
                 .remoteAddress(remoteHost, remoteTcpPort)
@@ -72,6 +74,24 @@ public class MqttClientManager {
         MqttClient mqttClient = new MqttClient(this, keepAliveSeconds);
         mqttClientList.add(mqttClient);
         mqttClient.connect();
+    }
+
+    public void addConnect(int count){
+        for(int i= 0;i<count;i++){
+            MqttClient mqttClient = new MqttClient(this, keepAliveSeconds,i);
+            mqttClientList.add(mqttClient);
+            mqttClient.connect();
+        }
+    }
+
+    public int getConnectCount(){
+        int count =0;
+        for(MqttClient mqttClient:mqttClientList){
+            if(mqttClient.state == MqttClient.ClientState.MQTT_CONNECTED){
+                count++;
+            }
+        }
+        return count;
     }
 
     public void dumpStates() {

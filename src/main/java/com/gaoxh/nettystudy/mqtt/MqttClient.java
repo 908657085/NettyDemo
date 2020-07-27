@@ -8,6 +8,7 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.handler.codec.mqtt.*;
 
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 public class MqttClient {
 
@@ -18,30 +19,55 @@ public class MqttClient {
     private Object stateLock = new Object();
     private String id;
     private int keepAliveSeconds;
+    private int reConnectCount = 0;
 
     public MqttClient(MqttClientManager clientManager, int keepAliveSeconds) {
         this.clientManager = clientManager;
-        this.id = UUID.randomUUID().toString();
+        this.id = "ClientTest_" + UUID.randomUUID().toString();
+        this.keepAliveSeconds = keepAliveSeconds;
+    }
+
+    public MqttClient(MqttClientManager clientManager, int keepAliveSeconds, int index) {
+        this.clientManager = clientManager;
+        this.id = "ClientTest_" + index;
         this.keepAliveSeconds = keepAliveSeconds;
     }
 
     public void connect() {
         synchronized (stateLock) {
             if (state == ClientState.NONE) {
-                clientManager.bootstrap.connect().addListener(new ChannelFutureListener() {
-                    @Override
-                    public void operationComplete(ChannelFuture future) throws Exception {
-                        if (future != null && future.channel() != null && future.channel().isActive()) {
-                            channel = future.channel();
-                            changeState(ClientState.SOCKET_CONNECTED);
-                            channel.pipeline().addLast("mqttHandler", new MqttChannelHandler(MqttClient.this));
-                        } else {
-                            state = ClientState.NONE;
+                try {
+                    changeState(ClientState.CONNECTING);
+                    clientManager.bootstrap.connect().addListener(new ChannelFutureListener() {
+                        @Override
+                        public void operationComplete(ChannelFuture future) throws Exception {
+                            if (future != null && future.channel() != null && future.channel().isActive()) {
+                                channel = future.channel();
+                                changeState(ClientState.SOCKET_CONNECTED);
+                                channel.pipeline().addLast("mqttHandler", new MqttChannelHandler(MqttClient.this));
+                            } else {
+                                System.out.println(id+"连接异常,重连中");
+                                changeState(ClientState.NONE);
+                                clientManager.eventExecutors.schedule(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        connect();
+                                    }
+                                },500, TimeUnit.MILLISECONDS);
+                            }
                         }
-                    }
-                }).getNow();
+                    });
+                } catch (Exception e) {
+                    System.out.println(id+"连接异常,重连中");
+                    changeState(ClientState.NONE);
+                    clientManager.eventExecutors.schedule(new Runnable() {
+                        @Override
+                        public void run() {
+                            connect();
+                        }
+                    },500, TimeUnit.MILLISECONDS);
+                }
             }
-            state = ClientState.CONNECTING;
         }
     }
 
@@ -51,16 +77,17 @@ public class MqttClient {
                     .connect()
                     .cleanSession(true)
                     .clientId(id)
+                    .username(Config.userName)
+                    .password(Config.password.getBytes())
                     .keepAlive(keepAliveSeconds)
                     .build());
         } catch (Exception e) {
-            e.printStackTrace();
+            System.out.println(id+"发送连接信息异常");
             setException(e.getCause());
         }
     }
 
     public void changeState(ClientState clientState) {
-        //System.out.println("change client state: old : " + state + " new: " + clientState);
         synchronized (stateLock) {
             this.state = clientState;
         }
@@ -70,8 +97,11 @@ public class MqttClient {
         try {
             channel.writeAndFlush(MqttMessageBuilders.subscribe()
                     .messageId(clientManager.getNextMessageId())
-                    .addSubscription(MqttQoS.AT_MOST_ONCE, "/netty/test/" + id)
-                    .addSubscription(MqttQoS.AT_MOST_ONCE, "/netty").build()
+                    .addSubscription(MqttQoS.AT_MOST_ONCE, "/L2" + id)
+                    .addSubscription(MqttQoS.AT_MOST_ONCE, "/pushCore/msn/L203P85U00704")
+                    .addSubscription(MqttQoS.AT_MOST_ONCE, "/L203P85U00704/sub")
+                    .addSubscription(MqttQoS.AT_MOST_ONCE, "/L203P85U00704/cilentCallback")
+                    .build()
             );
         } catch (Exception e) {
             e.printStackTrace();
@@ -79,6 +109,7 @@ public class MqttClient {
     }
 
     public void setException(Throwable cause) {
+        System.out.println("exception,set channel null " + id);
         synchronized (stateLock) {
             state = ClientState.EXCEPTION;
             this.cause = cause;
@@ -98,7 +129,7 @@ public class MqttClient {
         }
     }
 
-    public void publish(String content) {
+    public void publish(String topic, String content) {
         synchronized (stateLock) {
             if (state != ClientState.MQTT_CONNECTED) {
                 System.out.println("client not connected");
@@ -114,7 +145,7 @@ public class MqttClient {
             MqttMessage mqttMessage = MqttMessageBuilders.publish().
                     messageId(clientManager.getNextMessageId())
                     .qos(MqttQoS.valueOf(clientManager.random.nextInt(2)))
-                    .topicName("/netty/test/" + UUID.randomUUID().toString())
+                    .topicName(topic)
                     .retained(false)
                     .payload(buf)
                     .build();
@@ -130,6 +161,10 @@ public class MqttClient {
                 e.printStackTrace();
             }
         }
+    }
+
+    public void publish(String content) {
+        publish("/netty/test/" + UUID.randomUUID().toString(), content);
     }
 
     public void disconnect() {
@@ -148,6 +183,7 @@ public class MqttClient {
             close();
         }
     }
+
 
     public enum ClientState {
         NONE,
