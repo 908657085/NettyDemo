@@ -32,6 +32,11 @@ public class MqttClient {
         this.id = "ClientTest_" + index;
         this.keepAliveSeconds = keepAliveSeconds;
     }
+    public MqttClient(MqttClientManager clientManager, int keepAliveSeconds,String id) {
+        this.clientManager = clientManager;
+        this.id = id;
+        this.keepAliveSeconds = keepAliveSeconds;
+    }
 
     public void connect() {
         synchronized (stateLock) {

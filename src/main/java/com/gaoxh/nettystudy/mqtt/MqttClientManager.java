@@ -69,6 +69,11 @@ public class MqttClientManager {
         } while (inUseMsgIds.containsKey(new Integer(nextMsgId)));
         return nextMsgId;
     }
+    public void addConnect(String id){
+        MqttClient mqttClient = new MqttClient(this, keepAliveSeconds,id);
+        mqttClientList.add(mqttClient);
+        mqttClient.connect();
+    }
 
     public void addConnect() {
         MqttClient mqttClient = new MqttClient(this, keepAliveSeconds);

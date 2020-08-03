@@ -2,7 +2,7 @@ package com.gaoxh.nettystudy.mqtt;
 
 import java.util.concurrent.TimeUnit;
 
-public class MqttTestCase {
+public class MqttTestCase1 {
     /**
      * 测试连接数量 100
      */
@@ -21,44 +21,44 @@ public class MqttTestCase {
     public static int testCount = 0;
 
     public static void main(String[] args) {
-        System.out.println("使用示例:\n./nettyStudy 10 1 500");
-        System.out.println("参数1:连接数量 默认值 1");
-        System.out.println("参数2:断开连接次数 默认值 1");
-        System.out.println("参数3:断开以及连接操作间隔 默认值 500　非必填项");
-        if (args == null) {
-            System.out.println("使用默认参数测试:");
-        } else {
-            System.out.println("使用输入参数");
-            if (args.length > 0) {
-                try {
-                    int connectCount = Integer.parseInt(args[0]);
-                    CONNECTION_COUNT = connectCount;
-                } catch (Exception e) {
-                    System.out.println("测试连接数参数异常:" + args[0]);
-                }
-            }
-            if (args.length > 1) {
-                try {
-                    int reconnectCount = Integer.parseInt(args[1]);
-                    RECONNECT_COUNT = reconnectCount;
-                } catch (Exception e) {
-                    System.out.println("测试循环次数参数异常:" + args[1]);
-                }
-            }
-            if (args.length > 2) {
-                try {
-                    int delay = Integer.parseInt(args[2]);
-                    DISCONNECT_DELAY_MILLISECONDS = delay;
-                } catch (Exception e) {
-                    System.out.println("操作等待间隔参数异常:" + args[2]);
-                }
+        System.out.println("=================================使用示例:\nnettyStudy 200 test J102D03D00103,L220190408002\n=================================");
+        if (args.length > 0) {
+            try {
+                int reconnectCount = Integer.parseInt(args[0]);
+                RECONNECT_COUNT = reconnectCount;
+            } catch (Exception e) {
+                System.out.println("测试循环次数参数异常:" + args[1]);
             }
         }
-        System.out.println("连接数量:" + CONNECTION_COUNT);
-        System.out.println("连接断开次数:" + RECONNECT_COUNT);
-        System.out.println("操作间隔:" + DISCONNECT_DELAY_MILLISECONDS + "ms");
-        clientManager = new MqttClientManager(Config.SERVER_TEST, Config.PORT, 30);
-        clientManager.addConnect(CONNECTION_COUNT);
+        String server = Config.SERVER_TEST;
+        if (args.length > 1) {
+            try {
+                String environment = String.valueOf(args[1]);
+                if ("test".equals(environment)) {
+                    server = Config.SERVER_TEST;
+                } else if ("uat".equals(environment)) {
+                    server = Config.SERVER_UAT;
+                } else if ("release".equals(environment)) {
+                    server = Config.SERVER_RELEASE;
+                }
+            } catch (Exception e) {
+                System.out.println("测试环境选项错误,正确示例:\ntest\nuat\nrelease");
+            }
+        }
+        clientManager = new MqttClientManager(server, Config.PORT, 30);
+        String[] devices = new String[]{"TestClient"};
+        if (args.length > 2) {
+            try {
+                String snStrs = String.valueOf(args[2]);
+                devices = snStrs.split(",");
+            } catch (Exception e) {
+                System.out.println("sn选项错误\n正确示例:设备sn以逗号分割\nJ102D03D00103,L220190408002");
+            }
+        }
+        for (String sn : devices) {
+            System.out.println("设备:"+sn);
+            clientManager.addConnect(sn);
+        }
         checkState();
     }
 
